@@ -10,6 +10,7 @@ let admin;let staff;let manager;
 
 router.get('/admin',function (req,res,next) {
   req.session.destroy();
+  manager=0;
  
   res.render('admin/signin',{staff})
 })
@@ -43,6 +44,7 @@ router.post('/addstaff',function(req,res){
     Department: req.body.department,
     Salary: req.body.salary
   }
+  console.log(data)
   dbsql.query('INSERT INTO staffdetails SET ?',data,function(err,row,field){
     
     res.redirect('/staffshow')
@@ -82,7 +84,7 @@ router.post('/adminlogin',function (req,res,next){
     admin=0;
 		dbsql.query('SELECT * FROM staff WHERE Username = ?',username,async function(error, result, fields) {
       if(await bcrypt.compare(Passwords,result[0].password)){
-        req.session.loggedIn=true;
+        req.session.loggedAdminIn=true;
         req.session.user=result[0];
         admin=1;staff=0;manager=0;
         dbsql.query('SELECT * FROM users ORDER BY roomno ASC',function(err,row,field){
@@ -97,8 +99,8 @@ else{
       res.redirect('/admin');
 }
 })
-router.get('/updatestaff/:id', function (req, res) {
-  dbsql.query('SELECT * FROM staffdetails WHERE id = ?', req.params.id, function (err, row,field) {
+router.get('/updatestaff/:empid', function (req, res) {
+  dbsql.query('SELECT * FROM staffdetails WHERE empid = ?', req.params.empid, function (err, row,field) {
       if (err)
           throw err;
       
@@ -106,7 +108,7 @@ router.get('/updatestaff/:id', function (req, res) {
   });
 });
 
-router.post('/updatestaff/:id', function (req, res) {
+router.post('/updatestaff/:empid', function (req, res) {
   var data = {
     empid: req.body.empid,
     Name: req.body.name,
@@ -115,9 +117,9 @@ router.post('/updatestaff/:id', function (req, res) {
     Department: req.body.department,
     Salary: req.body.salary
   };
-  var ids=req.body.id;
+  var ids=req.body.empid;
  
-  dbsql.query('UPDATE staffdetails SET ? WHERE id = ?',[data,ids], function (err, row, fields) {
+  dbsql.query('UPDATE staffdetails SET ? WHERE empid = ?',[data,ids], function (err, row, fields) {
     
     if (err){
           throw err;
@@ -126,13 +128,13 @@ router.post('/updatestaff/:id', function (req, res) {
 
   })})
 
-  router.get('/deletestaff/:id', function (req, res) {
-    dbsql.query('DELETE FROM staffdetails WHERE id = ?', req.params.id, function (err, row) {
+  router.get('/deletestaff/:empid', function (req, res) {
+    dbsql.query('DELETE FROM staffdetails WHERE empid = ?', req.params.empid, function (err, row) {
         if (err)
             throw err;
 
              res.redirect('/staffshow')
-            })})
+     })})
            
             
     
@@ -140,9 +142,11 @@ router.post('/updatestaff/:id', function (req, res) {
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
- 
+ manager=0;
+let adminss= req.session.loggedAdminIn;
+let userstatus= req.session.loggedIn; 
 let users= req.session.user;
-res.render('home/index',{users})
+res.render('home/index',{users,adminss,userstatus})
 })
 
 router.get('/signin', function(req, res, next) {
@@ -171,6 +175,7 @@ router.get('/signin', function(req, res, next) {
    let loginstatus=false;
   var Emails=req.body.Email;
   var Passwords=req.body.Password;
+  console.log(req.body)
   if (Emails && Passwords) {
     admin=0;
 		dbsql.query('SELECT * FROM logindetails WHERE Email = ?',Emails,async function(error, result, fields) {
@@ -197,6 +202,7 @@ router.get('/signin', function(req, res, next) {
 })
 router.get('/signout',function (req,res) {
    req.session.destroy();
+   admin=0;
    res.redirect('/')
 })
 router.get('/passwordreset',function (req,res,next) {
@@ -221,6 +227,9 @@ router.post('/passwordreset',async function (req,res,next) {
       })
   })
   } 
+  else{
+    res.send('Passwords not matching')
+  }
 })
 
 router.post('/signupaction',async function (req,res){
@@ -284,11 +293,11 @@ router.post('/signupaction',async function (req,res){
  router.get('/deleteuser/:id', function (req, res) {
   dbsql.query('DELETE FROM users WHERE id = ?', req.params.id, function (err, row) {
       if (err)
-          throw err;
+          throw err; 
         if(admin){
-          dbsql.query('SELECT * FROM users',function(err,row,field){
+          dbsql.query('SELECT * FROM users ORDER BY roomno ASC',function(err,row,field){
 
-            res.render("admin/admin-signin",{customer : row,layout : false})
+            res.render("admin/admin-signin",{customer : row,admin,layout : false})
           })}
           else if(manager){
       
@@ -340,7 +349,7 @@ router.post('/updateuser/:id', function (req, res) {
             })}
             else if(admin){
 
-            res.render("admin/admin-signin",{customer : row,layout :false})
+            res.render("admin/admin-signin",{customer : row,admin,layout :false})
             }
             else if(manager){
 
@@ -396,11 +405,21 @@ router.post('/message',function (req,res) {
      
     
    }
+   Emails=req.body.email;
+
    dbsql.query('INSERT INTO users SET ?',data,function(err,row,field){
-     if(admin){
+     if(req.session.loggedIn){
+      dbsql.query('SELECT * FROM users WHERE email= ?',Emails,function(error,results,fields){
+        console.log(results[0]);
+        res.render('user/user-signin',{user,customer : results[0],layout : false});
+
+      })
+
+     }
+     else if(admin){
      dbsql.query('SELECT * FROM users',function(err,row,field){
 
-     res.render('admin/admin-signin',{customer : row})
+     res.render('admin/admin-signin',{customer : row,admin,layout : false})
      })}
      else if(manager){
       
