@@ -6,6 +6,37 @@ const { Router } = require('express');
 const { log } = require('handlebars');
 var msgs; 
 let admin;let staff;let manager;
+const Razorpay = require('razorpay'); 
+  
+// This razorpayInstance will be used to
+// access any resource from razorpay
+const razorpayInstance = new Razorpay({
+  
+    // Replace with your key_id
+    key_id: 'rzp_test_BlGOJy0Q6vHA3Q',
+  
+    // Replace with your key_secret
+    key_secret: 'bqjMLB5Ayqe0TviFMlKOuMUO'
+});
+
+//Inside app.js
+router.post('/createOrder', (req, res)=>{
+
+	// STEP 1:
+	const {amount,currency,receipt, notes} = req.body;	
+		
+	// STEP 2:	
+	razorpayInstance.orders.create({amount, currency, receipt, notes},
+		(err, order)=>{
+		
+		//STEP 3 & 4:
+		if(!err)
+			res.json(order)
+		else
+			res.send(err);
+		}
+	)
+});
 
 
 router.get('/admin',function (req,res,next) {
